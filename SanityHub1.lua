@@ -1,6 +1,7 @@
--- [[ 🧠 SANITY HUB: SABB EDITION V3 ]]
+-- [[ 🧠 SANITY HUB: SABB EDITION V4 ]]
 -- STATUS: UNDETECTED | CO-OWNER WHITELISTED
 -- UI: SLEEK GLASSMORPHISM & ANIMATED
+-- UPDATES: DUELS TAB, MELEE AIM, HITBOX, BAT AURA, LAGGER, FIXED SPEED/JUMP, AUTO DUEL/LOCK
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -17,7 +18,7 @@ local lp = Players.LocalPlayer
 -- =================================================================
 
 local CONFIG = {
-    Key = "ONION",
+    Key = "SANITY-ONTOP",
     Discord = "https://discord.gg/sanityhub",
     Whitelist = {
         12345678,     -- Replace with your User ID
@@ -37,19 +38,19 @@ end
 -- =================================================================
 
 local Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui
-if Parent:FindFirstChild("SanityV3") then Parent.SanityV3:Destroy() end
+if Parent:FindFirstChild("SanityV4") then Parent.SanityV4:Destroy() end
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "SanityV3"
+Gui.Name = "SanityV4"
 Gui.Parent = Parent
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.ResetOnSpawn = false
 
 -- PREMIUM COLORS
 local C = {
-    Bg = Color3.fromRGB(5, 5, 8),           -- Deep Void
-    Sidebar = Color3.fromRGB(12, 12, 16),   -- Slightly lighter for contrast
-    Accent = Color3.fromRGB(160, 100, 255), -- Vibrant Sanity Purple
+    Bg = Color3.fromRGB(5, 5, 8),
+    Sidebar = Color3.fromRGB(12, 12, 16),
+    Accent = Color3.fromRGB(160, 100, 255),
     Glow = Color3.fromRGB(180, 130, 255),
     Text = Color3.fromRGB(255, 255, 255),
     TextDim = Color3.fromRGB(140, 140, 150),
@@ -113,7 +114,7 @@ local Main = Instance.new("Frame", Gui)
 Main.Size = UDim2.new(0, 650, 0, 400)
 Main.Position = UDim2.new(0.5, -325, 0.3, 0)
 Main.BackgroundColor3 = C.Bg
-Main.BackgroundTransparency = 0.15 -- Glass effect
+Main.BackgroundTransparency = 0.15
 Main.ClipsDescendants = true
 Main.Visible = CheckWhitelist()
 EnableDrag(Main)
@@ -145,7 +146,7 @@ Title.Position = UDim2.new(0, 0, 0.04, 0)
 Title.BackgroundTransparency = 1
 
 local SubTitle = Instance.new("TextLabel", Sidebar)
-SubTitle.Text = "SABB EDITION"
+SubTitle.Text = "SABB V4"
 SubTitle.Font = Enum.Font.GothamBold
 SubTitle.TextSize = 10
 SubTitle.TextColor3 = C.TextDim
@@ -350,17 +351,65 @@ end)
 -- =================================================================
 
 local MainT = CreateTab("STEAL")
+local DuelsT = CreateTab("DUELS")
 local PlayerT = CreateTab("PLAYER")
 local MiscT = CreateTab("MISC")
-local SetT = CreateTab("SETTINGS")
 
--- [[ MAIN: STEAL & DESYNC ]]
+-- [[ MAIN: STEAL & LOGIC ]]
 AddToggle(MainT, "Instant Steal (0 Hold)", function(s)
     getgenv().InstantSteal = s
     task.spawn(function()
         while getgenv().InstantSteal do
             task.wait(0.1)
             pcall(function()
+                for _,v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(MainT, "Fast Steal (0.1 Hold)", function(s)
+    getgenv().FastSteal = s
+    task.spawn(function()
+        while getgenv().FastSteal do
+            task.wait(0.2)
+            pcall(function()
+                for _,v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") then v.HoldDuration = 0.1 end
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(MainT, "Auto Lock Base", function(s)
+    getgenv().AutoLock = s
+    task.spawn(function()
+        while getgenv().AutoLock do
+            task.wait(1)
+            pcall(function()
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("ProximityPrompt") and (v.ActionText:lower():find("lock") or v.ObjectText:lower():find("door")) then
+                        fireproximityprompt(v)
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(MainT, "Auto Duel Winner", function(s)
+    getgenv().AutoDuel = s
+    task.spawn(function()
+        while getgenv().AutoDuel do
+            task.wait(0.1)
+            pcall(function()
+                getgenv().FastSteal = true
+                if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+                    lp.Character.Humanoid.WalkSpeed = 150
+                end
                 for _,v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("ProximityPrompt") then v.HoldDuration = 0 end
                 end
@@ -387,111 +436,111 @@ AddToggle(MainT, "God-Mode Desync", function(s)
     end
 end)
 
-AddToggle(MainT, "Fast Steal (0.1 Hold)", function(s)
-    getgenv().FastSteal = s
+-- [[ DUELS TAB ]]
+AddToggle(DuelsT, "Melee Aim (Lock-On)", function(s)
+    getgenv().MeleeAim = s
     task.spawn(function()
-        while getgenv().FastSteal do
-            task.wait(0.2)
-            for _,v in pairs(Workspace:GetDescendants()) do
-                if v:IsA("ProximityPrompt") then v.HoldDuration = 0.1 end
-            end
+        while getgenv().MeleeAim do
+            task.wait()
+            pcall(function()
+                local closest = nil
+                local dist = math.huge
+                for _, v in pairs(Players:GetPlayers()) do
+                    if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                        local d = (v.Character.HumanoidRootPart.Position - lp.Character.HumanoidRootPart.Position).Magnitude
+                        if d < dist and d < 30 then 
+                            dist = d
+                            closest = v
+                        end
+                    end
+                end
+                if closest then
+                    local hrp = lp.Character.HumanoidRootPart
+                    local targetPos = closest.Character.HumanoidRootPart.Position
+                    hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z))
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(DuelsT, "Hitbox Expander", function(s)
+    getgenv().DuelsHitbox = s
+    task.spawn(function()
+        while getgenv().DuelsHitbox do
+            task.wait(1)
+            pcall(function()
+                for _, v in pairs(Players:GetPlayers()) do
+                    if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                        v.Character.HumanoidRootPart.Size = Vector3.new(20, 20, 20)
+                        v.Character.HumanoidRootPart.Transparency = 0.7
+                        v.Character.HumanoidRootPart.CanCollide = false
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(DuelsT, "Bat Aura (Auto Swing)", function(s)
+    getgenv().BatAura = s
+    task.spawn(function()
+        while getgenv().BatAura do
+            task.wait(0.1)
+            pcall(function()
+                local tool = lp.Character and lp.Character:FindFirstChildOfClass("Tool")
+                if tool then
+                    for _, v in pairs(Players:GetPlayers()) do
+                        if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                            local dist = (v.Character.HumanoidRootPart.Position - lp.Character.HumanoidRootPart.Position).Magnitude
+                            if dist < 15 then
+                                tool:Activate()
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+AddToggle(DuelsT, "Lagger (Server Physics Lag)", function(s)
+    getgenv().Lagger = s
+    task.spawn(function()
+        while getgenv().Lagger do
+            task.wait()
+            pcall(function()
+                if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                    for i = 1, 10 do
+                        lp.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(math.random(-9999,9999), math.random(-9999,9999), math.random(-9999,9999))
+                    end
+                end
+            end)
         end
     end)
 end)
 
 -- [[ PLAYER ]]
-AddToggle(PlayerT, "Speed Boost", function(s)
+AddToggle(PlayerT, "Speed Boost (Adjustable 120)", function(s)
     getgenv().Speed = s
     task.spawn(function()
         while getgenv().Speed do
             task.wait()
-            if lp.Character then lp.Character.Humanoid.WalkSpeed = 60 end
+            if lp.Character and lp.Character:FindFirstChild("Humanoid") then 
+                lp.Character.Humanoid.WalkSpeed = 120 
+            end
         end
-        if lp.Character then lp.Character.Humanoid.WalkSpeed = 16 end
+        if lp.Character and lp.Character:FindFirstChild("Humanoid") then 
+            lp.Character.Humanoid.WalkSpeed = 16 
+        end
     end)
 end)
 
-AddToggle(PlayerT, "Jump Boost", function(s)
+AddToggle(PlayerT, "Jump Boost (Fixed 120)", function(s)
     getgenv().Jump = s
     task.spawn(function()
         while getgenv().Jump do
             task.wait()
-            if lp.Character then lp.Character.Humanoid.JumpPower = 120 end
-        end
-        if lp.Character then lp.Character.Humanoid.JumpPower = 50 end
-    end)
-end)
-
-AddButton(PlayerT, "Invis (Client Reset)", function()
-    if lp.Character and lp.Character:FindFirstChild("LowerTorso") then
-        lp.Character.LowerTorso:Destroy()
-    end
-end)
-
--- [[ MISC ]]
-AddToggle(MiscT, "Anti-AFK", function(s)
-    getgenv().AntiAFK = s
-    if s then
-        lp.Idled:Connect(function()
-            if getgenv().AntiAFK then
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton2(Vector2.new())
-            end
-        end)
-    end
-end)
-
-AddButton(MiscT, "Extreme FPS Boost", function()
-    for _,v in pairs(Workspace:GetDescendants()) do
-        if v:IsA("Part") or v:IsA("UnionOperation") then
-            v.Material = Enum.Material.SmoothPlastic
-            v.Reflectance = 0
-            v.CastShadow = false
-        elseif v:IsA("Decal") or v:IsA("Texture") then
-            v:Destroy()
-        end
-    end
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 9e9
-end)
-
--- [[ SETTINGS ]]
-AddButton(SetT, "Unload Sanity Hub", function()
-    Gui:Destroy()
-    getgenv().Desync = false
-    getgenv().Speed = false
-    getgenv().Jump = false
-end)
-
--- CONTROLS LOGIC
-CloseBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0,0,0,0)}):Play()
-    task.wait(0.3)
-    Gui:Destroy()
-end)
-
-MiniBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0,0,0,0)}):Play()
-    task.wait(0.3)
-    Main.Visible = false
-    IconFrame.Size = UDim2.new(0,0,0,0)
-    IconFrame.Visible = true
-    TweenService:Create(IconFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0,55,0,55)}):Play()
-end)
-
-IconFrame.MouseButton1Click:Connect(function()
-    TweenService:Create(IconFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0,0,0,0)}):Play()
-    task.wait(0.3)
-    IconFrame.Visible = false
-    Main.Size = UDim2.new(0,0,0,0)
-    Main.Visible = true
-    TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0,650,0,400)}):Play()
-end)
-
--- INITIALIZATION
-Tabs[1].Page.Visible = true
-Tabs[1].Btn.BackgroundColor3 = C.Accent
-Tabs[1].Btn.TextColor3 = Color3.new(1,1,1)
-Tabs[1].Btn.BackgroundTransparency = 0
-
-print("🧠 SANITY HUB: V3 SLEEK EDITION LOADED")
+            if lp.Character and lp.Character:FindFirstChild("Humanoid") then 
+                lp.Character.Humanoid.UseJumpPower = true
+                lp.Character.Humanoid.JumpP
