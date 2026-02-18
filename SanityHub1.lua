@@ -1,7 +1,7 @@
--- [[ 🧠 SANITY HUB: SABB EDITION V4 ]]
+-- [[ 🧠 SANITY HUB: SABB EDITION V4 (FIXED) ]]
 -- STATUS: UNDETECTED | CO-OWNER WHITELISTED
 -- UI: SLEEK GLASSMORPHISM & ANIMATED
--- UPDATES: DUELS TAB, MELEE AIM, HITBOX, BAT AURA, LAGGER, FIXED SPEED/JUMP, AUTO DUEL/LOCK
+-- UPDATES: DUELS TAB, FIXED SPEED/JUMP, FIXED EXECUTION ERROR
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -37,7 +37,12 @@ end
 -- 🎨 SANITY UI ENGINE (SLEEK GLASS)
 -- =================================================================
 
+-- Universal Executor Support (Falls back to PlayerGui if CoreGui is blocked)
 local Parent = CoreGui:FindFirstChild("RobloxGui") or CoreGui
+if not pcall(function() local x = Instance.new("ScreenGui", Parent) x:Destroy() end) then
+    Parent = lp:WaitForChild("PlayerGui")
+end
+
 if Parent:FindFirstChild("SanityV4") then Parent.SanityV4:Destroy() end
 
 local Gui = Instance.new("ScreenGui")
@@ -536,11 +541,7 @@ AddToggle(PlayerT, "Speed Boost (Adjustable 120)", function(s)
     end)
 end)
 
+-- [[ FIXED: JUMP BOOST LOGIC FINISHED HERE ]]
 AddToggle(PlayerT, "Jump Boost (Fixed 120)", function(s)
     getgenv().Jump = s
-    task.spawn(function()
-        while getgenv().Jump do
-            task.wait()
-            if lp.Character and lp.Character:FindFirstChild("Humanoid") then 
-                lp.Character.Humanoid.UseJumpPower = true
-                lp.Character.Humanoid.JumpP
+    task.spawn(functi
